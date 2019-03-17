@@ -12,15 +12,18 @@ shopt -s globstar # ** will match all files and zero or more directories and sub
 
 # ----- variables -----
 
-CURRENT_SCRIPT=`basename "$0"`
+CURRENT_DIR=$(pwd)
+CURRENT_SCRIPT=$(basename "$0")
 DEFAULT_LOG=.flac_integrity
 
+OPTION_FORCE_ALL=false
+OPTION_FORCE_ERRONEOUS=false
+OPTION_INTERVAL=90
+OPTION_LIMIT=0
+OPTION_LOGFILE=""
 OPTION_RECURSIVE=false
 OPTION_VERBOSE=false
-OPTION_LIMIT=0
-OPTION_INTERVAL=90
-OPTION_LOGFILE=""
-WORKING_DIRECTORY=./
+WORKING_DIRECTORY=.
 
 file_count=0
 check_count=0
@@ -38,10 +41,12 @@ function show_help {
   echo "$CURRENT_SCRIPT [<options>] /some/path"
   echo ""
   echo "options:"
+  echo "  -f    force check of erroneous files"
+  echo "  -F    force check of all files"
   echo "  -i    interval for re-checking files in days (default: ${OPTION_INTERVAL})"
-  echo "  -r    recursive mode"
   echo "  -l    limit amount of files per run"
   echo "  -o    log file output"
+  echo "  -r    recursive mode"
   echo "  -v    verbose mode"
   echo "  -h    help (this output)"
 }
@@ -59,19 +64,25 @@ fi
 
 # ----- handle options & arguments -----
 
-while getopts ":hi:rl:o:v" OPTION; do
+while getopts ":hfFi:l:o:rv" OPTION; do
   case $OPTION in
+    f)
+      OPTION_FORCE_ERRONEOUS=true
+      ;;
+    F)
+      OPTION_FORCE_ALL=true
+      ;;
     i)
       OPTION_INTERVAL=$OPTARG
-      ;;
-    r)
-      OPTION_RECURSIVE=true
       ;;
     l)
       OPTION_LIMIT=$OPTARG
       ;;
     o)
       OPTION_LOGFILE=$OPTARG
+      ;;
+    r)
+      OPTION_RECURSIVE=true
       ;;
     v)
       OPTION_VERBOSE=true
@@ -93,34 +104,14 @@ done
 
 shift $((OPTIND - 1)) # remove parsed options and args from $@ list
 
-# use provided directory
-if [ -n "$1" ]; then
-  WORKING_DIRECTORY=$1
-fi
-
-log "Checking access to \"$WORKING_DIRECTORY\""
-if [ ! -d "$WORKING_DIRECTORY" ]; then
-  echo "Directory \"$WORKING_DIRECTORY\" does not exist."
-  exit 1
-fi
-
-log "Switching to \"$WORKING_DIRECTORY\""
-cd "$WORKING_DIRECTORY"
-
-if [ "$OPTION_RECURSIVE" = true ]; then
-  files=(./**/*.flac)
-else
-  files=(*.flac)
-fi
-
 
 # ----- setup logging -----
 
 if [ -n "$OPTION_LOGFILE" ]; then
-  logfile="$OPTION_LOGFILE"
+  logfile=$(readlink -m "$OPTION_LOGFILE")
   logfile_tmp="$OPTION_LOGFILE"'.tmp'
 else
-  logfile="$WORKING_DIRECTORY/$DEFAULT_LOG"
+  logfile=$(readlink -m "$WORKING_DIRECTORY/$DEFAULT_LOG")
   logfile_tmp="$WORKING_DIRECTORY/$DEFAULT_LOG"'.tmp'
 fi
 log "Using logfile \"$logfile\""
@@ -132,7 +123,28 @@ fi
 
 if [ ! -f "$logfile" ]; then
   [ "$OPTION_VERBOSE" = true ] && echo "Logfile wasn't present and therefore created"
-  touch $logfile
+  touch "$logfile" || exit 1
+fi
+
+
+# ----- retrieve file list -----
+
+# use provided directory
+if [ -n "$1" ]; then
+  WORKING_DIRECTORY=$(readlink -m "$1")
+fi
+
+log "Checking access to \"$WORKING_DIRECTORY\""
+if [ ! -d "$WORKING_DIRECTORY" ]; then
+  echo "Directory \"$WORKING_DIRECTORY\" does not exist."
+  exit 1
+fi
+
+log "Retrieving file list"
+if [ "$OPTION_RECURSIVE" = true ]; then
+  files=("$WORKING_DIRECTORY"/**/*.flac)
+else
+  files=("$WORKING_DIRECTORY"/*.flac)
 fi
 
 
@@ -147,7 +159,7 @@ for file in "${files[@]}"; do
   log "\e[1m$file\e[0m"
 
   file_count=$((file_count + 1))
-  recheck=true
+  do_check=true
   logline=$(grep "$file" "$logfile")
 
   if [ -n "$logline" ]; then
@@ -164,13 +176,17 @@ for file in "${files[@]}"; do
 
     if (( age <= $OPTION_INTERVAL )); then
       log "File was already checked $age days ago"
-      recheck=false
+      if [ "$OPTION_FORCE_ALL" = true ] || ([ "$OPTION_FORCE_ERRONEOUS" = true ] && [ "$status" = "ERROR" ]); then
+        log "Forced check"
+      else
+        do_check=false
+      fi
     else
       grep -v "$logline" "$logfile" > "$logfile_tmp" && mv "$logfile_tmp" "$logfile"
     fi
   fi
 
-  if [ "$recheck" = true ]; then
+  if [ "$do_check" = true ]; then
     log "File is being (re-)checked"
     check_count=$((check_count + 1))
     status=$(flac -wst "$file" 2>/dev/null && echo "OK" || echo "ERROR");
