@@ -160,16 +160,13 @@ for file in "${files[@]}"; do
 
   file_count=$((file_count + 1))
   do_check=true
-  logline=$(grep "$file" "$logfile")
+  logline=$(grep "$file" "$logfile" | tail -1)
 
   if [ -n "$logline" ]; then
     log "File is present in log"
 
-    # prepare delimiters for autosplitting
-    logline=$(echo $logline | sed -e 's/ - /➝/' -e 's/ => /➝/')
-
     # convert log line to array
-    IFS='➝' read -r -a logentry <<< "$logline"
+    IFS='➝' read -r -a logentry <<< "$(echo $logline | sed -e 's/ - /➝/' -e 's/ => /➝/')"
 
     status="${logentry[2]}"
     age=$(( (`date -d "00:00" +%s` - `date -d ${logentry[0]} +%s`) / (24 * 3600) ))
@@ -181,8 +178,9 @@ for file in "${files[@]}"; do
       else
         do_check=false
       fi
-    else
-      grep -v "$logline" "$logfile" > "$logfile_tmp" && mv "$logfile_tmp" "$logfile"
+    # else
+    #   # remove old state from log
+    #   grep -v "$logline" "$logfile" > "$logfile_tmp" && mv "$logfile_tmp" "$logfile"
     fi
   fi
 
