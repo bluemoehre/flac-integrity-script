@@ -12,22 +12,24 @@ When a file hasn't been checked for the given amount of days it will get re-chec
 Usage
 -----
 ```bash
-flac-integrity.sh [<options>] /some/path
+flac-integrity.sh [<options>] <directory>
 ```
 
 Options
 -----
+- **`-f`** &#8195; force re-check of erroneous files
+- **`-F`** &#8195; force re-check of all files
 - **`-i`** &#8195; interval for re-checking files in days *(default: 90)*
-- **`-r`** &#8195; recursive mode
 - **`-l`** &#8195; limit amount of files per run
-- **`-o`** &#8195; log file output
+- **`-o`** &#8195; log file output *(default: `<path>/.flac-integrity`)*
+- **`-r`** &#8195; recursive mode
 - **`-v`** &#8195; verbose mode
 - **`-h`** &#8195; help
 
 Examples
 --------
 
-Analyze 100 FLAC files within `/media/audio/flac` and show all log output.
+Analyze 100 FLAC files within `/media/audio/flac` and show all details.
 ```bash
 flac-integrity.sh -rv -l 100 /media/audio/flac
 ```
