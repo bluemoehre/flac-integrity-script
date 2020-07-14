@@ -105,6 +105,19 @@ done
 shift $((OPTIND - 1)) # remove parsed options and args from $@ list
 
 
+# ----- check provided directory -----
+
+if [ -n "$1" ]; then
+  WORKING_DIRECTORY=$(readlink -m "$1")
+fi
+
+log "Checking access to \"$WORKING_DIRECTORY\""
+if [ ! -d "$WORKING_DIRECTORY" ]; then
+  echo "Directory \"$WORKING_DIRECTORY\" does not exist."
+  exit 1
+fi
+
+
 # ----- setup logging -----
 
 if [ -n "$OPTION_LOGFILE" ]; then
@@ -128,17 +141,6 @@ fi
 
 
 # ----- retrieve file list -----
-
-# use provided directory
-if [ -n "$1" ]; then
-  WORKING_DIRECTORY=$(readlink -m "$1")
-fi
-
-log "Checking access to \"$WORKING_DIRECTORY\""
-if [ ! -d "$WORKING_DIRECTORY" ]; then
-  echo "Directory \"$WORKING_DIRECTORY\" does not exist."
-  exit 1
-fi
 
 log "Retrieving file list"
 if [ "$OPTION_RECURSIVE" = true ]; then
