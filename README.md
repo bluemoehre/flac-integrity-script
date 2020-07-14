@@ -21,7 +21,7 @@ Options
 - **`-F`** &#8195; force re-check of all files
 - **`-i`** &#8195; interval for re-checking files in days *(default: 90)*
 - **`-l`** &#8195; limit amount of files per run
-- **`-o`** &#8195; log file output *(default: `<path>/.flac-integrity`)*
+- **`-o`** &#8195; log file location *(default: `<path>/.flac-integrity`)*
 - **`-r`** &#8195; recursive mode
 - **`-v`** &#8195; verbose mode
 - **`-h`** &#8195; help
