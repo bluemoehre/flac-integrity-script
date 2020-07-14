@@ -45,7 +45,7 @@ function show_help {
   echo "  -F    force check of all files"
   echo "  -i    interval for re-checking files in days (default: ${OPTION_INTERVAL})"
   echo "  -l    limit amount of files per run"
-  echo "  -o    log file output"
+  echo "  -o    log file location"
   echo "  -r    recursive mode"
   echo "  -v    verbose mode"
   echo "  -h    help (this output)"
